@@ -1,0 +1,18 @@
+.fieldBox {
+    flex-direction: column;
+}
+
+.aligned label {
+    width: auto;
+    min-width: 0px;
+}
+
+form .aligned ul {
+    margin-left: 0px;
+    padding-left: 0px;
+}
+
+form .aligned div.help {
+    margin-left: 0px;
+    padding-left: 0px;
+}
