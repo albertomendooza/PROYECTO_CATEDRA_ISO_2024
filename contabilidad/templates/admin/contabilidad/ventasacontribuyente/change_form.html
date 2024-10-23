@@ -102,6 +102,62 @@
         };
       }
     </script>
+    <script>
+      // Este script asigna si una compra está sujeta a percepción de IVA, haciendo que la 
+      // sessionStorage guarde el parametro del proveedor
+      django.jQuery('#id_cliente').on('select2:select', function (evt) {
+            sessionStorage.setItem("clasificacion_proveedor", evt.params.data.clasificacion);
+      });
+    </script>
+    <script>
+      // Script para que se autocomplete los campos "serie de documento" y "numero de documento"
+      // basado en la empresa, la sucursal y en este caso con CCF
+
+      // Creo la función que hala desde API la serie del documento y el número de documento.
+      // y las coloca en los datos de la compra.
+      async function traerDocumento() {
+        document.getElementById("id_serie_de_documento").value = "";
+        document.getElementById("id_numero_de_resolucion").value = "";
+        pk_empresa = document.getElementById("id_empresa").value;
+        pk_sucursal = document.getElementById("id_sucursal").value;
+        url = `http://${window.location.host}/empresas/json_view_comprobante/${pk_empresa}/${pk_sucursal}/CCF/`;
+        let response = await fetch(url);
+        let comprobante= await response.json();
+        document.getElementById("id_serie_de_documento").value = comprobante["serie_de_documento"];
+        document.getElementById("id_numero_de_resolucion").value = comprobante["numero_de_resolucion"];
+      }
+
+      django.jQuery("#id_sucursal").on("select2:select", traerDocumento);
+    </script>
+    <script>
+      let ventasGravadas = document.getElementById("id_ventas_gravadas");
+      let ventasNoSujetas = document.getElementById("id_ventas_no_sujetas");
+      let ventasExentas = document.getElementById("id_ventas_exentas");
+      function calcularTotales(){
+        console.log("Calculando totales ...")
+        let iva = document.getElementById("id_iva");
+        iva.value = (parseFloat(ventasGravadas.value) * 0.13).toFixed(2)
+        let subTotal = document.getElementById("id_sub_total");
+        subTotal.value = (parseFloat(ventasGravadas.value) * 1.13).toFixed(2);
+        let total = document.getElementById("id_total");
+        let ivaRetenido = document.getElementById("id_retencion_de_iva");
+        if (sessionStorage["clasificacion_proveedor"] == "G") {
+          ivaRetenido.value = (parseFloat(ventasGravadas.value) * 0.01).toFixed(2);
+        } else {
+          ivaRetenido.value = "0.00"
+        }
+        total.value = (
+          parseFloat(subTotal.value) +
+          parseFloat(ventasNoSujetas.value) + 
+          parseFloat(ventasExentas.value) - 
+          parseFloat(ivaRetenido.value)
+        ).toFixed(2)
+      }
+      ventasGravadas.addEventListener("input", calcularTotales);
+      ventasNoSujetas.addEventListener("input", calcularTotales);
+      ventasExentas.addEventListener("input", calcularTotales);
+      django.jQuery("#id_cliente").on("select2:select", calcularTotales);
+    </script>
 {% endblock %}
 
 {# JavaScript for prepopulated fields #}

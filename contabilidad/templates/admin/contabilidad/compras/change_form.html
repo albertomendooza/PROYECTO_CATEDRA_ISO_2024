@@ -72,35 +72,44 @@
             async>
     </script>
     <script>
-      // document.getElementById("id_sucursal").dataset.empresa_id = "1";
-      django.jQuery("#id_empresa").on("select2:select", function() {
-        document.getElementById("id_sucursal").dataset.empresa_id = this.value;
-      })
-      'use strict';
-      
-      {
-        const $ = django.jQuery;
-
-        $.fn.djangoAdminSelect2 = function () {
-          $.each(this, function (i, element) {
-            $(element).select2({
-              ajax: {
-                data: (params) => {
-                  return {
-                    term: params.term,
-                    page: params.page,
-                    app_label: element.dataset.appLabel,
-                    model_name: element.dataset.modelName,
-                    field_name: element.dataset.fieldName,
-                    empresa_id: element.dataset.empresa_id
-                  };
-                }
-              }
-            });
+      // Este script asigna si una compra está sujeta a percepción de IVA, haciendo que la 
+      // sessionStorage guarde el parametro del proveedor
+      const $ = django.jQuery;
+      $(function () {
+          $('#id_proveedor').on('select2:select', function (evt) {
+            sessionStorage.setItem("clasificacion_proveedor", evt.params.data.clasificacion);
           });
-          return this;
-        };
+        });
+    </script>
+    <script>
+      let compra = document.getElementById("id_compra_neta");
+      let compraExcenta = document.getElementById("id_compra_excenta");
+      let compraExcluida = document.getElementById("id_compra_excluida");
+      function calcularTotales() {
+        let compra = document.getElementById("id_compra_neta");
+        let iva = document.getElementById("id_iva");
+        iva.value = (parseFloat(compra.value) * 0.13).toFixed(2);
+        let subTotal = document.getElementById("id_sub_total");
+        subTotal.value = (parseFloat(compra.value) + parseFloat(iva.value)).toFixed(2);
+        let percepcionIVA = document.getElementById("id_percepcion_iva");
+        if (sessionStorage["clasificacion_proveedor"] == "G") {
+          percepcionIVA.value = (parseFloat(compra.value) * 0.01).toFixed(2);
+        } else {
+          percepcionIVA.value = "0.00"
+        }
+        let total = document.getElementById("id_total");
+        total.value = (
+          parseFloat(compra.value) +
+          parseFloat(iva.value) +
+          parseFloat(compraExcenta.value) +
+          parseFloat(compraExcluida) +
+          parseFloat(percepcionIVA.value)
+        ).toFixed(2);
       }
+      compra.addEventListener("input", calcularTotales);
+      compraExcenta.addEventListener("input", calcularTotales);
+      compraExcluida.addEventListener("input", calcularTotales);
+
     </script>
 {% endblock %}
 

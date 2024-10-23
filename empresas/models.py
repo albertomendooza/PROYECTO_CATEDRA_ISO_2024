@@ -39,6 +39,7 @@ class Sucursal(models.Model):
 
 class Comprobante(models.Model):
     empresa = models.ForeignKey(to=Empresa, on_delete=models.PROTECT)
+    sucursal = models.ForeignKey(to=Sucursal, on_delete=models.PROTECT)
     tipo_de_comprobante = models.CharField(
         max_length=3,
         choices=(
@@ -56,3 +57,6 @@ class Comprobante(models.Model):
         max_length=20,
     )
     marcar_como_actual = models.BooleanField(default=False)
+
+    def __str__(self) -> str:
+        return f"{self.numero_de_resolucion} - {self.serie_de_documento}" 

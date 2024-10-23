@@ -53,3 +53,6 @@ class ConsumidorFinal(models.Model):
     class Meta:
         verbose_name = "consumidor final"
         verbose_name_plural = "consumidores finales"
+    
+    def __str__(self) -> str:
+        return f"{self.nombre} - {self.numero_de_documento}"

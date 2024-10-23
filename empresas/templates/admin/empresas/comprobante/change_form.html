@@ -47,7 +47,7 @@
 
 {% block field_sets %}
 {% for fieldset in adminform %}
-  {% include "admin/includes/fieldset_form_block.html" %}
+  {% include "admin/includes/fieldset.html" %}
 {% endfor %}
 {% endblock %}
 
@@ -72,7 +72,6 @@
             async>
     </script>
     <script>
-      // document.getElementById("id_sucursal").dataset.empresa_id = "1";
       django.jQuery("#id_empresa").on("select2:select", function() {
         document.getElementById("id_sucursal").dataset.empresa_id = this.value;
       })
@@ -80,7 +79,6 @@
       
       {
         const $ = django.jQuery;
-
         $.fn.djangoAdminSelect2 = function () {
           $.each(this, function (i, element) {
             $(element).select2({

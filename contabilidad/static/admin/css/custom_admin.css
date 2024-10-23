@@ -5,6 +5,7 @@
 .aligned label {
     width: auto;
     min-width: 0px;
+    padding: 0px;
 }
 
 form .aligned ul {
@@ -15,4 +16,12 @@ form .aligned ul {
 form .aligned div.help {
     margin-left: 0px;
     padding-left: 0px;
+}
+
+.form-row {
+    padding: 0;
+}
+
+#content, .aligned label + p {
+    padding-top: 0;
 }
