@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "contactos.apps.ContactosConfig",
     "contabilidad.apps.ContabilidadConfig",
     "empresas.apps.EmpresasConfig",
+    "debug_toolbar",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -38,6 +39,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

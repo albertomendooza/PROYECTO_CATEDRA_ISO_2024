@@ -42,6 +42,7 @@ class VentasAConsumidorFinalAdmin(admin.ModelAdmin):
         ("ventas_gravadas", "ventas_no_sujetas", "ventas_exentas", "sub_total", "retencion_de_iva"),
         ("total",)
     ]
+    list_filter = ["empresa"]
     save_as = True
 
     class Media:
@@ -64,6 +65,15 @@ class VentasAConsumidorFinalAdmin(admin.ModelAdmin):
         form.base_fields["cliente"].widget.can_delete_related = False
         form.base_fields["cliente"].widget.can_change_related = False
         return form
+    
+    def get_queryset(self, request):
+        print(request.path)
+        if request.path.split("/")[-2] == self.model._meta.label_lower.split(".")[-1]:
+            if request.GET.get("empresa__id__exact"):
+                return super().get_queryset(request)
+            else:
+                return self.model.objects.none()
+        return super().get_queryset(request)
 
 
 @admin.register(VentasAContribuyente, site=custom_admin_site)
@@ -76,6 +86,7 @@ class VentasAContribuyente(admin.ModelAdmin):
         ("ventas_no_sujetas", "ventas_exentas","retencion_de_iva"),
         "total",
     ]
+    list_filter = ["empresa"]
     save_as = True
 
     def get_form(self, request, obj=None, **kwargs):
@@ -93,6 +104,15 @@ class VentasAContribuyente(admin.ModelAdmin):
         form.base_fields["cliente"].widget.can_delete_related = False
         form.base_fields["cliente"].widget.can_change_related = False
         return form
+    
+    def get_queryset(self, request):
+        print(request.path)
+        if request.path.split("/")[-2] == self.model._meta.label_lower.split(".")[-1]:
+            if request.GET.get("empresa__id__exact"):
+                return super().get_queryset(request)
+            else:
+                return self.model.objects.none()
+        return super().get_queryset(request)
 
     class Media:
         css = {"all": ("admin/css/custom_admin.css",)}
@@ -110,6 +130,7 @@ class ComprasAdmin(admin.ModelAdmin):
         
     ]
     list_display = ["__str__", "empresa", "proveedor"]
+    list_filter = ["empresa"]
     save_as = True
 
     def get_form(self, request, obj=None, **kwargs):
@@ -124,6 +145,15 @@ class ComprasAdmin(admin.ModelAdmin):
         form.base_fields["proveedor"].widget.can_delete_related = False
         form.base_fields["proveedor"].widget.can_change_related = False
         return form
+    
+    def get_queryset(self, request):
+        print(request.path)
+        if request.path.split("/")[-2] == self.model._meta.label_lower.split(".")[-1]:
+            if request.GET.get("empresa__id__exact"):
+                return super().get_queryset(request)
+            else:
+                return self.model.objects.none()
+        return super().get_queryset(request)
     
     class Media:
         css = {
