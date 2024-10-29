@@ -139,6 +139,15 @@ class VentasAContribuyente(models.Model):
         max_length=3,
         choices=(("CCF", "Comprobante de Crédito Fiscal"), ("NDC", "Nota de Crédito")),
     )
+    clase_de_documento = models.CharField(
+        choices=(
+            ("IMP", "impreso"),
+            ("FOU", "formulario único"),
+            ("DTE", "documento tributario electrónico"),
+        ),
+        default="IMP",
+        max_length=3,
+    )
     serie_de_documento = models.CharField(max_length=30)
     numero_de_resolucion = models.CharField(
         max_length=20, verbose_name="número de resolución"
