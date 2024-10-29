@@ -754,11 +754,21 @@ def crear_anexo_de_ventas_a_contribuyentes(empresa, año, mes):
     output_anexo = StringIO()
     csv_anexo = csv.writer(output_anexo, delimiter=";")
     for venta in ventas:
+        clase_de_documento = "1"
+        if venta.clase_de_documento != "IMP":
+            if venta.clase_de_documento == "DTE":
+                clase_de_documento = "4"
+            else:
+                clase_de_documento = "2"
+        tipo_de_documento = "03"
+        if venta.tipo_de_comprobante != "CCF":
+            if venta.tipo_de_comprobante == "NDC":
+                tipo_de_documento = "05"
         csv_anexo.writerow(
             [
                 f"{str(venta.fecha.day).zfill(2)}/{str(venta.fecha.month).zfill(2)}/{str(venta.fecha.year)}",
-                "1",
-                "03",
+                clase_de_documento,
+                tipo_de_documento,
                 f"{venta.numero_de_resolucion}",
                 f"{venta.serie_de_documento}",
                 f"{venta.numero_de_documento}",
