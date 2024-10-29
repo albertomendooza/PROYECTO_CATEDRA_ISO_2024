@@ -1,3 +1,5 @@
+import csv
+from io import StringIO
 from django.db.models import Max, Min, Sum
 from fpdf import FPDF
 
@@ -633,7 +635,7 @@ def crear_reporte_de_ventas_a_consumidor_final(empresa, año, mes):
             documento_final=Max("numero_de_documento"),
         )
     )
-    
+
     reporte_de_ventas_a_consumidor_final.numero_de_pagina = 1
     reporte_de_ventas_a_consumidor_final.add_page(empresa=empresa, año=año, mes=mes)
     reporte_de_ventas_a_consumidor_final.insertar_encabezado_de_tabla()
@@ -698,7 +700,6 @@ def crear_reporte_de_ventas_a_consumidor_final(empresa, año, mes):
             text=f"{venta['total']}", w=30, new_y="TOP", align="R"
         )
 
-
     if reporte_de_ventas_a_consumidor_final.will_page_break(14.8):
         reporte_de_ventas_a_consumidor_final.add_page()
 
@@ -740,3 +741,152 @@ def crear_reporte_de_ventas_a_consumidor_final(empresa, año, mes):
         name="Libro_de_ventas_consumidor_final.pdf"
     )
     return reporte_de_ventas_a_consumidor_final
+
+
+def crear_anexo_de_ventas_a_contribuyentes(empresa, año, mes):
+    """
+    Apartir del Queryset de las ventas mensuales, crea el anexo
+    que pide el f07 de ventas a contribuyentes
+    """
+    ventas = VentasAContribuyente.objects.filter(
+        empresa=empresa, fecha__month=mes, fecha__year=año
+    )
+    output_anexo = StringIO()
+    csv_anexo = csv.writer(output_anexo, delimiter=";")
+    for venta in ventas:
+        csv_anexo.writerow(
+            [
+                f"{str(venta.fecha.day).zfill(2)}/{str(venta.fecha.month).zfill(2)}/{str(venta.fecha.year)}",
+                "1",
+                "03",
+                f"{venta.numero_de_resolucion}",
+                f"{venta.serie_de_documento}",
+                f"{venta.numero_de_documento}",
+                f"{venta.numero_de_documento}",
+                f"{venta.cliente.nrc}",
+                f"{venta.cliente.nombre}",
+                f"{venta.ventas_exentas}",
+                f"{venta.ventas_no_sujetas}",
+                f"{venta.ventas_gravadas}",
+                f"{venta.iva}",
+                "0.00",
+                "0.00",
+                f"{venta.total}",
+                "",
+                "1",
+            ]
+        )
+    output_anexo.seek(0)
+    return output_anexo
+
+
+def crear_anexo_de_ventas_a_consumidor_final(empresa, año, mes):
+    """
+    Apartir del Queryset de las ventas mensuales, crea el anexo
+    que pide el f07 de ventas a contribuyentes
+    """
+    
+    ventas_por_fecha = (
+        VentasAConsumidorFinal.objects.filter(empresa=empresa)
+        .values("fecha__day", "numero_de_resolucion", "serie_de_documento")
+        .order_by("fecha")
+        .annotate(
+            total=Sum("total"),
+            excentas=Sum("ventas_exentas"),
+            no_sujetas=Sum("ventas_no_sujetas"),
+            grabadas_locales=Sum("ventas_gravadas"),
+            documento_inicial=Min("numero_de_documento"),
+            documento_final=Max("numero_de_documento"),
+        )
+    )
+    output_anexo = StringIO()
+    csv_anexo = csv.writer(output_anexo, delimiter=";")
+    for venta in ventas_por_fecha:
+        csv_anexo.writerow(
+            [
+                f"{str(venta['fecha__day']).zfill(2)}/{str(mes).zfill(2)}/{str(año)}",
+                "1",
+                "01",
+                f"{venta['numero_de_resolucion']}",
+                f"{venta['serie_de_documento']}",
+                f"{venta['documento_inicial']}",
+                f"{venta['documento_final']}",
+                f"{venta['documento_inicial']}",
+                f"{venta['documento_final']}",
+                "",
+                f"{venta['excentas']}",
+                "0.00",
+                f"{venta['no_sujetas']}",
+                f"{venta['grabadas_locales']}",
+                "0.00",
+                "0.00",
+                "0.00",
+                "0.00",
+                "0.00",
+                f"{venta['total']}",
+                "2",
+            ]
+        )
+    output_anexo.seek(0)
+    return output_anexo
+
+
+def crear_anexo_de_compras(empresa, año, mes):
+    """
+    Apartir del Queryset de las compras, crea el anexo
+    que pide el f07 de ventas a contribuyentes
+    """
+    compras = Compras.objects.filter(empresa=empresa, fecha__month=mes, fecha__year=año)
+    output_anexo = StringIO()
+    csv_anexo = csv.writer(output_anexo, delimiter=";")
+
+    for compra in compras:
+        clase_de_documento = "1"
+        if len(compra.numero_de_comprobante) > 25:
+            clase_de_documento = "4"
+        tipo_de_documento = "03"
+        if compra.tipo_de_comprobante != "CCF":
+            if compra.tipo_de_comprobante == "EXP":
+                tipo_de_documento = "11"
+            elif compra.tipo_de_comprobante == "PLZ":
+                tipo_de_documento = "12"
+            elif compra.tipo_de_comprobante == "NDC":
+                tipo_de_documento == "05"
+        clasificacion_gasto_costo = "1"
+        tipo_de_costo_gasto = "5"
+        if compra.tipo_de_gasto != "CST":
+            clasificacion_gasto_costo = 2
+            if compra.tipo_de_gasto == "GAD":
+                tipo_de_costo_gasto = "2"
+            elif compra.tipo_de_gasto == "GAV":
+                tipo_de_costo_gasto = "1"
+            elif compra.tipo_de_gasto == "GAF":
+                tipo_de_costo_gasto = "3"
+
+        csv_anexo.writerow(
+            [
+                f"{str(compra.fecha.day).zfill(2)}/{str(compra.fecha.month).zfill(2)}/{str(compra.fecha.year)}",
+                clase_de_documento,
+                tipo_de_documento,
+                f"{compra.numero_de_comprobante}",
+                f"{compra.proveedor.nrc}",
+                f"{compra.proveedor.nombre}",
+                "0.00",
+                "0.00",
+                "0.00",
+                f"{compra.compra_neta}",
+                "0.00",
+                "0.00",
+                "0.00",
+                f"{compra.iva}",
+                f"{compra.total}",
+                "",
+                "1",
+                clasificacion_gasto_costo,
+                "1",
+                tipo_de_costo_gasto,
+                "3"
+            ]
+        )
+    output_anexo.seek(0)
+    return output_anexo

@@ -9,7 +9,14 @@ from django.urls import path
 
 from contabilidad.admin import custom_admin_site
 from contabilidad.forms import GenerarLibrosYReportesMensualesDeEmpresaForm
-from contabilidad.reports import crear_reporte_de_compras, crear_reporte_de_ventas_a_contribuyentes, crear_reporte_de_ventas_a_consumidor_final
+from contabilidad.reports import (
+    crear_reporte_de_compras,
+    crear_reporte_de_ventas_a_contribuyentes,
+    crear_reporte_de_ventas_a_consumidor_final,
+    crear_anexo_de_ventas_a_contribuyentes,
+    crear_anexo_de_ventas_a_consumidor_final,
+    crear_anexo_de_compras
+)
 
 from .models import Empresa, Sucursal, Comprobante
 
@@ -56,8 +63,39 @@ class EmpresaAdmin(admin.ModelAdmin):
                         año=form.cleaned_data["año"],
                         mes=form.cleaned_data["mes"],
                     )
-                    reporte_de_ventas_a_contribuyentes = crear_reporte_de_ventas_a_contribuyentes(empresa=empresa, año=form.cleaned_data["año"], mes=form.cleaned_data["mes"])
-                    reporte_de_ventas_a_consumidor_final = crear_reporte_de_ventas_a_consumidor_final(empresa=empresa, año=form.cleaned_data["año"], mes=form.cleaned_data["mes"])
+                    reporte_de_ventas_a_contribuyentes = (
+                        crear_reporte_de_ventas_a_contribuyentes(
+                            empresa=empresa,
+                            año=form.cleaned_data["año"],
+                            mes=form.cleaned_data["mes"],
+                        )
+                    )
+                    reporte_de_ventas_a_consumidor_final = (
+                        crear_reporte_de_ventas_a_consumidor_final(
+                            empresa=empresa,
+                            año=form.cleaned_data["año"],
+                            mes=form.cleaned_data["mes"],
+                        )
+                    )
+                    anexo_de_ventas_a_contribuyentes = (
+                        crear_anexo_de_ventas_a_contribuyentes(
+                            empresa=empresa,
+                            año=form.cleaned_data["año"],
+                            mes=form.cleaned_data["mes"],
+                        )
+                    )
+                    anexo_de_ventas_a_consumidor_final = (
+                        crear_anexo_de_ventas_a_consumidor_final(
+                            empresa=empresa,
+                            año=form.cleaned_data["año"],
+                            mes=form.cleaned_data["mes"],
+                        )
+                    )
+                    anexo_de_compras = crear_anexo_de_compras(
+                        empresa=empresa,
+                        año=form.cleaned_data["año"],
+                        mes=form.cleaned_data["mes"],   
+                    )
                     reportes_descripcion_corta = f"{empresa.nombre}_libros_y_reportes_{form.cleaned_data['año']}_{form.cleaned_data['mes']}"
                     with NamedTemporaryFile() as tmp:
                         reporte_de_compras.output(tmp.name)
@@ -80,6 +118,18 @@ class EmpresaAdmin(admin.ModelAdmin):
                         zip_file.writestr(
                             f"Ventas-FCF-{reportes_descripcion_corta}.pdf", stream
                         )
+                    zip_file.writestr(
+                        f"F07-Anexo-ventas-contribuyentes-{reportes_descripcion_corta}.csv",
+                        anexo_de_ventas_a_contribuyentes.getvalue(),
+                    )
+                    zip_file.writestr(
+                        f"F07-Anexo-ventas-consumidor-final-{reportes_descripcion_corta}.csv",
+                        anexo_de_ventas_a_consumidor_final.getvalue(),
+                    )
+                    zip_file.writestr(
+                        f"F07-Anexo-compras-{reportes_descripcion_corta}.csv",
+                        anexo_de_compras.getvalue(),
+                    )
                     zip_file.close()
                     response = HttpResponse(
                         byte_data.getvalue(), content_type="application/zip"
