@@ -18,7 +18,7 @@
 <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
 &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
 &rsaquo; {% if has_view_permission %}<a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>{% else %}{{ opts.verbose_name_plural|capfirst }}{% endif %}
-&rsaquo; {% if add %}{% blocktranslate with name=opts.verbose_name %}Add {{ name }}{% endblocktranslate %}{% else %}{{ original|truncatewords:"18" }}{% endif %}
+&rsaquo; Generar reportes y libros para {{ original|truncatewords:"18" }} 
 </div>
 {% endblock %}
 {% endif %}
@@ -47,7 +47,7 @@
 
 {% block field_sets %}
 {% for fieldset in adminform %}
-  {% include "admin/includes/fieldset_form_block.html" %}
+  {% include "admin/includes/fieldset.html" %}
 {% endfor %}
 {% endblock %}
 
@@ -61,7 +61,10 @@
 
 {% block after_related_objects %}{% endblock %}
 
-{% block submit_buttons_bottom %}{% submit_row %}{% endblock %}
+{% block submit_buttons_bottom %}<div class="submit-row">
+  <input type="submit" value="Generar libros y reportes" class="add"/>
+</div>
+{% endblock %}
 
 {% block admin_change_form_document_ready %}
     <script id="django-admin-form-add-constants"
@@ -70,47 +73,6 @@
                 data-model-name="{{ opts.model_name }}"
             {% endif %}
             async>
-    </script>
-    <script>
-      // Este script asigna si una compra está sujeta a percepción de IVA, haciendo que la 
-      // sessionStorage guarde el parametro del proveedor
-      const $ = django.jQuery;
-      $(function () {
-          $('#id_proveedor').on('select2:select', function (evt) {
-            sessionStorage.setItem("clasificacion_proveedor", evt.params.data.clasificacion);
-          });
-        });
-    </script>
-    <script>
-      let compra = document.getElementById("id_compra_neta");
-      let compraExcenta = document.getElementById("id_compra_excenta");
-        let compraExcluida = document.getElementById("id_compra_excluida");
-        function calcularTotales() {
-          let compra = document.getElementById("id_compra_neta");
-          let iva = document.getElementById("id_iva");
-          iva.value = (parseFloat(compra.value) * 0.13).toFixed(2);
-          let subTotal = document.getElementById("id_sub_total");
-          subTotal.value = (parseFloat(compra.value) + parseFloat(iva.value)).toFixed(2);
-          let percepcionIVA = document.getElementById("id_percepcion_iva");
-          if (sessionStorage["clasificacion_proveedor"] == "G" && (parseFloat(compra.value) >= 100)) {
-            percepcionIVA.value = (parseFloat(compra.value) * 0.01).toFixed(2);
-          } else {
-            percepcionIVA.value = "0.00"
-          }
-          let total = document.getElementById("id_total");
-          total.value = (
-            parseFloat(compra.value) +
-            parseFloat(iva.value) +
-            parseFloat(compraExcenta.value) +
-            parseFloat(compraExcluida.value) -
-            parseFloat(percepcionIVA.value)
-          ).toFixed(2);
-          console.log(total.value);
-        }
-      compra.addEventListener("input", calcularTotales);
-      compraExcenta.addEventListener("input", calcularTotales);
-      compraExcluida.addEventListener("input", calcularTotales);
-
     </script>
 {% endblock %}
 

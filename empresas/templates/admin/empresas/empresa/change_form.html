@@ -28,7 +28,16 @@
 {% if change and not is_popup %}
   <ul class="object-tools">
     {% block object-tools-items %}
-      {% change_form_object_tools %}
+    <li>
+      {% url opts|admin_urlname:'history' original.pk|admin_urlquote as history_url %}
+      <a href="{% add_preserved_filters history_url %}" class="historylink">{% translate "History" %}</a>
+  </li>
+  {% if has_change_permission %}
+  <li>
+    <a target="_blank" href="{% url "admin:solicitar_libros_y_reportes_mensuales_de_la_empresa" adminform.form.instance.id %}" class="historylink">Generar reportes y libros</a>
+  </li>
+  {% endif %}
+  {% if has_absolute_url %}<li><a href="{{ absolute_url }}" class="viewsitelink">{% translate "View on site" %}</a></li>{% endif %}
     {% endblock %}
   </ul>
 {% endif %}
@@ -47,7 +56,7 @@
 
 {% block field_sets %}
 {% for fieldset in adminform %}
-  {% include "admin/includes/fieldset_form_block.html" %}
+  {% include "admin/includes/fieldset.html" %}
 {% endfor %}
 {% endblock %}
 
@@ -70,47 +79,6 @@
                 data-model-name="{{ opts.model_name }}"
             {% endif %}
             async>
-    </script>
-    <script>
-      // Este script asigna si una compra está sujeta a percepción de IVA, haciendo que la 
-      // sessionStorage guarde el parametro del proveedor
-      const $ = django.jQuery;
-      $(function () {
-          $('#id_proveedor').on('select2:select', function (evt) {
-            sessionStorage.setItem("clasificacion_proveedor", evt.params.data.clasificacion);
-          });
-        });
-    </script>
-    <script>
-      let compra = document.getElementById("id_compra_neta");
-      let compraExcenta = document.getElementById("id_compra_excenta");
-        let compraExcluida = document.getElementById("id_compra_excluida");
-        function calcularTotales() {
-          let compra = document.getElementById("id_compra_neta");
-          let iva = document.getElementById("id_iva");
-          iva.value = (parseFloat(compra.value) * 0.13).toFixed(2);
-          let subTotal = document.getElementById("id_sub_total");
-          subTotal.value = (parseFloat(compra.value) + parseFloat(iva.value)).toFixed(2);
-          let percepcionIVA = document.getElementById("id_percepcion_iva");
-          if (sessionStorage["clasificacion_proveedor"] == "G" && (parseFloat(compra.value) >= 100)) {
-            percepcionIVA.value = (parseFloat(compra.value) * 0.01).toFixed(2);
-          } else {
-            percepcionIVA.value = "0.00"
-          }
-          let total = document.getElementById("id_total");
-          total.value = (
-            parseFloat(compra.value) +
-            parseFloat(iva.value) +
-            parseFloat(compraExcenta.value) +
-            parseFloat(compraExcluida.value) -
-            parseFloat(percepcionIVA.value)
-          ).toFixed(2);
-          console.log(total.value);
-        }
-      compra.addEventListener("input", calcularTotales);
-      compraExcenta.addEventListener("input", calcularTotales);
-      compraExcluida.addEventListener("input", calcularTotales);
-
     </script>
 {% endblock %}
 
