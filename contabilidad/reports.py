@@ -1,6 +1,6 @@
 from fpdf import FPDF
 
-from .models import Compras
+from .models import Compras, VentasAContribuyente, VentasAConsumidorFinal
 
 
 class ReporteDeCompras(FPDF):
@@ -272,25 +272,34 @@ def crear_reporte_de_compras(empresa, año, mes):
 
 
 class ReporteDeVentasAContribuyentes(FPDF):
+    def add_page(self, empresa, año, mes):
+        self.empresa = empresa
+        self.año = año
+        self.mes = mes
+        super().add_page()
+
     def header(self):
+        empresa = self.empresa
+        año = self.año
+        mes = self.mes
         self.set_font(family="helvetica", style="", size=10)
         # Los márgenes son ajustados para tener un área de 267 mm de uso horizontal
         # Y 195.9 mm vertical, estando la página en formato horizontal.
         self.set_margins(left=6.2, top=10, right=6.2)
         self.set_auto_page_break(auto=True, margin=10)
         self.cell(w=30, text="REGISTRO Nº", align="L")
-        self.cell(w=59, text="172014-0", align="L")
+        self.cell(w=59, text=empresa.nrc, align="L")
         self.cell(w=89, text="LIBRO DE VENTAS A CONTRIBUYENTES", align="C")
         self.cell(w=89)
         self.ln(5)
         self.cell(w=30, text="MES", align="L")
-        self.cell(w=59, text="Febrero", align="L")
+        self.cell(w=59, text=f"{mes}", align="L")
         self.cell(w=89, text="", align="C")
         self.cell(w=89)
         self.ln(5)
         self.cell(w=30, text="AÑO", align="L")
-        self.cell(w=59, text="2024", align="L")
-        self.cell(w=89, text="COMERCIALIZADORA GILTON, S.A. DE C.V.", align="C")
+        self.cell(w=59, text=f"{año}", align="L")
+        self.cell(w=89, text=empresa.nombre, align="C")
         self.cell(w=89, text=f"FOLIO {self.page_no()}", align="R")
         self.ln(8)
         self.set_font(family="helvetica", style="", size=7)
@@ -342,50 +351,71 @@ class ReporteDeVentasAContribuyentes(FPDF):
         )
 
 
-def crear_reporte_de_ventas_a_contribuyentes():
+def crear_reporte_de_ventas_a_contribuyentes(empresa, año, mes):
     """
     Función para crear un reporte de compras
     """
+    ventas = VentasAContribuyente.objects.filter(empresa=empresa, fecha__month=mes, fecha__year=año)
     reporte_de_ventas_ccf = ReporteDeVentasAContribuyentes(
         format="Letter", unit="mm", orientation="landscape"
     )
-    reporte_de_ventas_ccf.add_page()
+    reporte_de_ventas_ccf.add_page(empresa=empresa, año=año, mes=mes)
     reporte_de_ventas_ccf.set_author("ECONTA S.A. de C.V.")
     reporte_de_ventas_ccf.set_creator("Pacamara Dev")
     reporte_de_ventas_ccf.set_font(family="helvetica", style="", size=7)
     reporte_de_ventas_ccf.insertar_encabezado_de_tabla()
 
-    for i in range(100):
+    correlativo = 1
+    total_ventas_exentas = 0
+    total_ventas_grabadas = 0
+    total_iva = 0
+    total_retencion_iva = 0
+    total_total = 0
+
+    for venta in ventas:
         if reporte_de_ventas_ccf.will_page_break(14.8):
-            reporte_de_ventas_ccf.add_page()
+            reporte_de_ventas_ccf.add_page(empresa=empresa, año=año, mes=mes)
             reporte_de_ventas_ccf.insertar_encabezado_de_tabla()
 
         reporte_de_ventas_ccf.multi_cell(
             text="", w=20, new_x="LMARGIN", new_y="NEXT", align="C"
         )
-        reporte_de_ventas_ccf.multi_cell(text=f"{i+1}", w=10, new_y="TOP", align="L")
-        reporte_de_ventas_ccf.multi_cell(text="23/03", w=12, new_y="TOP", align="L")
+        reporte_de_ventas_ccf.multi_cell(text=f"{correlativo}", w=10, new_y="TOP", align="L")
+        reporte_de_ventas_ccf.multi_cell(text=f"{venta.fecha.day}/{venta.fecha.month}", w=12, new_y="TOP", align="L")
         reporte_de_ventas_ccf.multi_cell(
-            text="E0123456789123456789123456",
+            text=f"{venta.numero_de_documento}",
             w=25,
             new_y="TOP",
             align="L",
         )
-        reporte_de_ventas_ccf.multi_cell(text="1234567-8", w=20, new_y="TOP", align="L")
+        reporte_de_ventas_ccf.multi_cell(text=f"{venta.cliente.nrc}", w=20, new_y="TOP", align="L")
         reporte_de_ventas_ccf.multi_cell(
-            text="CORPORACION GILTON, S.A. DE C.V.", w=65, new_y="TOP", align="L"
+            text=f"{venta.cliente.nombre}", w=65, new_y="TOP", align="L"
         )
-        reporte_de_ventas_ccf.multi_cell(text="", w=30, new_y="TOP", align="R")
+        if venta.ventas_exentas:
+            reporte_de_ventas_ccf.multi_cell(text=f"{venta.ventas_exentas}", w=30, new_y="TOP", align="R")
+        else:
+            reporte_de_ventas_ccf.multi_cell(text="", w=30, new_y="TOP", align="R")
+        if venta.ventas_gravadas:
+            reporte_de_ventas_ccf.multi_cell(
+                text=f"{venta.ventas_gravadas}", w=30, new_y="TOP", align="R"
+            )
+        else:
+            reporte_de_ventas_ccf.multi_cell(
+                text="", w=30, new_y="TOP", align="R"
+            )
         reporte_de_ventas_ccf.multi_cell(
-            text="5,999,999.00", w=30, new_y="TOP", align="R"
+            text=f"{venta.iva}", w=25, new_y="TOP", align="R"
         )
+        reporte_de_ventas_ccf.multi_cell(text=f"{venta.retencion_de_iva}", w=22, new_y="TOP", align="R")
         reporte_de_ventas_ccf.multi_cell(
-            text="505,326.58", w=25, new_y="TOP", align="R"
+            text=f"{venta.total}", w=27, new_x="LMARGIN", new_y="NEXT", align="R"
         )
-        reporte_de_ventas_ccf.multi_cell(text="9,999.87", w=22, new_y="TOP", align="R")
-        reporte_de_ventas_ccf.multi_cell(
-            text="6,779,998.87", w=27, new_x="LMARGIN", new_y="NEXT", align="R"
-        )
+        total_ventas_exentas += venta.ventas_exentas
+        total_ventas_grabadas += venta.ventas_gravadas
+        total_iva += venta.iva
+        total_retencion_iva += venta.retencion_de_iva
+        total_total += venta.total
 
     # Agrego la fila de totales del final:
 
@@ -398,19 +428,19 @@ def crear_reporte_de_ventas_a_contribuyentes():
     reporte_de_ventas_ccf.multi_cell(text="\nTOTALES", w=132, new_y="TOP", align="R")
 
     reporte_de_ventas_ccf.multi_cell(
-        text="\n0.00", w=30, new_y="TOP", align="R", border=1
+        text=f"\n{total_ventas_exentas}", w=30, new_y="TOP", align="R", border=1
     )
     reporte_de_ventas_ccf.multi_cell(
-        text="\n5,999,999.00", w=30, new_y="TOP", align="R", border=1
+        text=f"\n{total_ventas_grabadas}", w=30, new_y="TOP", align="R", border=1
     )
     reporte_de_ventas_ccf.multi_cell(
-        text="\n505,326.58", w=25, new_y="TOP", align="R", border=1
+        text=f"\n{total_iva}", w=25, new_y="TOP", align="R", border=1
     )
     reporte_de_ventas_ccf.multi_cell(
-        text="\n9,999.87", w=22, new_y="TOP", align="R", border=1
+        text=f"\n{total_retencion_iva}", w=22, new_y="TOP", align="R", border=1
     )
     reporte_de_ventas_ccf.multi_cell(
-        text="\n6,779,998.87", w=27, new_y="TOP", align="R", border=1
+        text=f"\n{total_total}", w=27, new_y="TOP", align="R", border=1
     )
 
     # Espacio para firmas, si no hay suficiente espacio se hace un quiebre
@@ -422,7 +452,7 @@ def crear_reporte_de_ventas_a_contribuyentes():
         text="Firma de contribuyente:", w=133.5, align="C", new_y="TOP"
     )
     reporte_de_ventas_ccf.multi_cell(text="Firma de Contador:", w=133.5, align="C")
-    reporte_de_ventas_ccf.output(name="Libro_de_ventas_ccf.pdf")
+    return reporte_de_ventas_ccf
 
 
 class ReporteDeVentasAConsumidorFinal(FPDF):
