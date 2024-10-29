@@ -56,6 +56,7 @@ class VentasAConsumidorFinalAdmin(admin.ModelAdmin):
         ),
         ("total",),
     ]
+    list_display = ["__str__", "fecha", "sucursal"]
     list_filter = ["empresa"]
     save_as = True
 

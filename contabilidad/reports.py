@@ -1,3 +1,4 @@
+from django.db.models import Max, Min, Sum
 from fpdf import FPDF
 
 from .models import Compras, VentasAContribuyente, VentasAConsumidorFinal
@@ -456,7 +457,16 @@ def crear_reporte_de_ventas_a_contribuyentes(empresa, año, mes):
 
 
 class ReporteDeVentasAConsumidorFinal(FPDF):
+    def add_page(self, empresa, año, mes):
+        self.empresa = empresa
+        self.año = año
+        self.mes = mes
+        super().add_page()
+
     def header(self):
+        empresa = self.empresa
+        año = self.año
+        mes = self.mes
         self.set_font(family="helvetica", style="", size=10)
         # Los márgenes son ajustados para tener un área de 260 mm de uso horizontal
         # Y 195.9 mm vertical, estando la página en formato horizontal.
@@ -465,19 +475,19 @@ class ReporteDeVentasAConsumidorFinal(FPDF):
         self.set_margins(left=9.7, top=10, right=9.7)
         self.set_auto_page_break(auto=True, margin=10)
         self.cell(w=29, text="REGISTRO Nº", align="L")
-        self.cell(w=57, text="172014-0", align="L")
+        self.cell(w=57, text=empresa.nrc, align="L")
         self.cell(w=87, text="LIBRO DE VENTAS A CONSUMIDOR FINAL", align="C")
         self.cell(w=87)
         self.ln(5)
         self.cell(w=29, text="MES", align="L")
-        self.cell(w=57, text="Febrero", align="L")
+        self.cell(w=57, text=f"{mes}", align="L")
         self.cell(w=87, text="", align="C")
         self.cell(w=87)
         self.ln(5)
         self.cell(w=29, text="AÑO", align="L")
-        self.cell(w=57, text="2024", align="L")
-        self.cell(w=87, text="COMERCIALIZADORA GILTON, S.A. DE C.V.", align="C")
-        self.cell(w=87, text=f"FOLIO {self.page_no()}", align="R")
+        self.cell(w=57, text=f"{año}", align="L")
+        self.cell(w=87, text=empresa.nombre, align="C")
+        self.cell(w=87, text=f"FOLIO {self.numero_de_pagina}", align="R")
         self.ln(8)
         self.set_font(family="helvetica", style="", size=7)
         # TOP da la siguiente celda a la par.
@@ -528,58 +538,167 @@ class ReporteDeVentasAConsumidorFinal(FPDF):
         )
 
 
-def crear_reporte_de_ventas_a_consumidor_final():
+def crear_reporte_de_ventas_a_consumidor_final(empresa, año, mes):
 
     reporte_de_ventas_a_consumidor_final = ReporteDeVentasAConsumidorFinal(
         format="Letter", unit="mm", orientation="landscape"
     )
-    reporte_de_ventas_a_consumidor_final.add_page()
+    reporte_de_ventas_a_consumidor_final.numero_de_pagina = 1
+    reporte_de_ventas_a_consumidor_final.add_page(empresa=empresa, año=año, mes=mes)
     reporte_de_ventas_a_consumidor_final.set_author("ECONTA S.A. de C.V.")
     reporte_de_ventas_a_consumidor_final.set_creator("Pacamara Dev")
     reporte_de_ventas_a_consumidor_final.set_font(family="helvetica", style="", size=7)
     reporte_de_ventas_a_consumidor_final.insertar_encabezado_de_tabla()
 
-    for i in range(100):
+    ventas_por_sucursal = (
+        VentasAConsumidorFinal.objects.filter(empresa=empresa)
+        .values("sucursal__nombre", "fecha__day")
+        .order_by("sucursal", "fecha")
+        .annotate(
+            total=Sum("total"),
+            excentas=Sum("ventas_exentas"),
+            grabadas_locales=Sum("ventas_gravadas"),
+            documento_inicial=Min("numero_de_documento"),
+            documento_final=Max("numero_de_documento"),
+        )
+    )
+
+    sucursal = ventas_por_sucursal[0]["sucursal__nombre"]
+
+    for venta in ventas_por_sucursal:
+        if venta["sucursal__nombre"] != sucursal:
+            reporte_de_ventas_a_consumidor_final.numero_de_pagina = 1
+            reporte_de_ventas_a_consumidor_final.add_page(empresa=empresa, año=año, mes=mes)
+            reporte_de_ventas_a_consumidor_final.insertar_encabezado_de_tabla()
+            sucursal = venta["sucursal__nombre"]
+
         if reporte_de_ventas_a_consumidor_final.will_page_break(14.8):
-            reporte_de_ventas_a_consumidor_final.add_page()
+            reporte_de_ventas_a_consumidor_final.numero_de_pagina += 1
+            reporte_de_ventas_a_consumidor_final.add_page(empresa=empresa, año=año, mes=mes)
             reporte_de_ventas_a_consumidor_final.insertar_encabezado_de_tabla()
 
         reporte_de_ventas_a_consumidor_final.multi_cell(
             text="", w=20, new_x="LMARGIN", new_y="NEXT", align="C"
         )
         reporte_de_ventas_a_consumidor_final.multi_cell(
-            text="23/03", w=15, new_y="TOP", align="L"
+            text=f"{mes}/{venta['fecha__day']}", w=15, new_y="TOP", align="L"
         )
         reporte_de_ventas_a_consumidor_final.multi_cell(
-            text="E0123456789123456789123456",
+            text=f"{venta['documento_inicial']}",
             w=45,
             new_y="TOP",
             align="L",
         )
         reporte_de_ventas_a_consumidor_final.multi_cell(
-            text="E0123456789123456789123477",
+            text=f"{venta['documento_final']}",
             w=45,
             new_y="TOP",
             align="L",
         )
         reporte_de_ventas_a_consumidor_final.multi_cell(
-            text="Centro 1", w=35, new_y="TOP", align="L"
+            text=f"{venta['sucursal__nombre']}", w=35, new_y="TOP", align="L"
         )
-        reporte_de_ventas_a_consumidor_final.multi_cell(
-            text="", w=30, new_y="TOP", align="L"
-        )
+        if venta['excentas']:
+            reporte_de_ventas_a_consumidor_final.multi_cell(
+                text=f"{venta['excentas']}", w=30, new_y="TOP", align="R"
+            )
+        else:
+            reporte_de_ventas_a_consumidor_final.multi_cell(
+                text="", w=30, new_y="TOP", align="R"
+            )
+        if venta['grabadas_locales']:
+            reporte_de_ventas_a_consumidor_final.multi_cell(
+                text=f"{venta['grabadas_locales']}", w=30, new_y="TOP", align="R"
+            )
+        else:
+            reporte_de_ventas_a_consumidor_final.multi_cell(
+                text="", w=30, new_y="TOP", align="R"
+            )
         reporte_de_ventas_a_consumidor_final.multi_cell(
             text="", w=30, new_y="TOP", align="R"
         )
         reporte_de_ventas_a_consumidor_final.multi_cell(
-            text="9,999.00", w=30, new_y="TOP", align="R"
+            text=f"{venta['total']}", w=30, new_y="TOP", align="R"
         )
-        reporte_de_ventas_a_consumidor_final.multi_cell(
-            text="9,999.00", w=29, new_y="TOP", align="R"
+
+    ventas_por_fecha = (
+        VentasAConsumidorFinal.objects.filter(empresa=empresa)
+        .values("fecha__day")
+        .order_by("fecha")
+        .annotate(
+            total=Sum("total"),
+            excentas=Sum("ventas_exentas"),
+            grabadas_locales=Sum("ventas_gravadas"),
+            documento_inicial=Min("numero_de_documento"),
+            documento_final=Max("numero_de_documento"),
         )
+    )
+    
+    reporte_de_ventas_a_consumidor_final.numero_de_pagina = 1
+    reporte_de_ventas_a_consumidor_final.add_page(empresa=empresa, año=año, mes=mes)
+    reporte_de_ventas_a_consumidor_final.insertar_encabezado_de_tabla()
+
+    total_excenta = 0
+    total_gravadas = 0
+    total_exportaciones = 0
+    total = 0
+
+    for venta in ventas_por_fecha:
+        total_excenta += venta['excentas']
+        total_gravadas += venta['grabadas_locales']
+        total_exportaciones = 0
+        total += venta['total']
+
+        if reporte_de_ventas_a_consumidor_final.will_page_break(14.8):
+            reporte_de_ventas_a_consumidor_final.numero_de_pagina += 1
+            reporte_de_ventas_a_consumidor_final.add_page(empresa=empresa, año=año, mes=mes)
+            reporte_de_ventas_a_consumidor_final.insertar_encabezado_de_tabla()
+
         reporte_de_ventas_a_consumidor_final.multi_cell(
             text="", w=20, new_x="LMARGIN", new_y="NEXT", align="C"
         )
+        reporte_de_ventas_a_consumidor_final.multi_cell(
+            text=f"{mes}/{venta['fecha__day']}", w=15, new_y="TOP", align="L"
+        )
+        reporte_de_ventas_a_consumidor_final.multi_cell(
+            text=f"{venta['documento_inicial']}",
+            w=45,
+            new_y="TOP",
+            align="L",
+        )
+        reporte_de_ventas_a_consumidor_final.multi_cell(
+            text=f"{venta['documento_final']}",
+            w=45,
+            new_y="TOP",
+            align="L",
+        )
+        reporte_de_ventas_a_consumidor_final.multi_cell(
+            text="--", w=35, new_y="TOP", align="L"
+        )
+        if venta['excentas']:
+            reporte_de_ventas_a_consumidor_final.multi_cell(
+                text=f"{venta['excentas']}", w=30, new_y="TOP", align="R"
+            )
+        else:
+            reporte_de_ventas_a_consumidor_final.multi_cell(
+                text="", w=30, new_y="TOP", align="L"
+            )
+        if venta['grabadas_locales']:
+            reporte_de_ventas_a_consumidor_final.multi_cell(
+                text=f"{venta['grabadas_locales']}", w=30, new_y="TOP", align="R"
+            )
+        else:
+            reporte_de_ventas_a_consumidor_final.multi_cell(
+                text="", w=30, new_y="TOP", align="R"
+            )
+        reporte_de_ventas_a_consumidor_final.multi_cell(
+            text="", w=30, new_y="TOP", align="R"
+        )
+        reporte_de_ventas_a_consumidor_final.multi_cell(
+            text=f"{venta['total']}", w=30, new_y="TOP", align="R"
+        )
+
+
     if reporte_de_ventas_a_consumidor_final.will_page_break(14.8):
         reporte_de_ventas_a_consumidor_final.add_page()
 
@@ -596,16 +715,16 @@ def crear_reporte_de_ventas_a_consumidor_final():
         text="\nTOTALES", w=140, new_y="TOP", align="R"
     )
     reporte_de_ventas_a_consumidor_final.multi_cell(
-        text="\n$0.00", w=30, new_y="TOP", align="R", border=1
+        text=f"\n{total_excenta}", w=30, new_y="TOP", align="R", border=1
     )
     reporte_de_ventas_a_consumidor_final.multi_cell(
-        text="\n$0.00", w=30, new_y="TOP", align="R", border=1
+        text=f"\n{total_gravadas}", w=30, new_y="TOP", align="R", border=1
     )
     reporte_de_ventas_a_consumidor_final.multi_cell(
-        text="\n9,999,999.00", w=30, new_y="TOP", align="R", border=1
+        text=f"\n{total_exportaciones}", w=30, new_y="TOP", align="R", border=1
     )
     reporte_de_ventas_a_consumidor_final.multi_cell(
-        text="\n9,999,999.00", w=29, new_y="TOP", align="R", border=1
+        text=f"\n{total}", w=29, new_y="TOP", align="R", border=1
     )
     if reporte_de_ventas_a_consumidor_final.will_page_break(50):
         reporte_de_ventas_a_consumidor_final.add_page()

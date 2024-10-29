@@ -124,7 +124,7 @@ class VentasAConsumidorFinal(models.Model):
         verbose_name_plural = "ventas a consumidor final"
 
     def __str__(self) -> str:
-        return f"{self.empresa} - {self.numero_de_resolucion}"
+        return f"{self.empresa.nombre} - {self.numero_de_documento}"
 
 
 class VentasAContribuyente(models.Model):
