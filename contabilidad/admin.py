@@ -99,6 +99,7 @@ class VentasAContribuyente(admin.ModelAdmin):
             "serie_de_documento",
             "numero_de_resolucion",
             "numero_de_documento",
+            "clase_de_documento"
         ),
         ("cliente", "fecha"),
         ("ventas_gravadas", "iva", "sub_total"),
