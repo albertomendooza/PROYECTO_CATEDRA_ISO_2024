@@ -150,7 +150,7 @@ class VentasAContribuyente(models.Model):
     )
     serie_de_documento = models.CharField(max_length=30)
     numero_de_resolucion = models.CharField(
-        max_length=20, verbose_name="número de resolución"
+        max_length=100, verbose_name="número de resolución"
     )
     cliente = models.ForeignKey(
         to=Contacto, limit_choices_to={"cliente": True}, on_delete=models.PROTECT
