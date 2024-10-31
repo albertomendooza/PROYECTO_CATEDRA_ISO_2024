@@ -3,17 +3,13 @@ from django.contrib.auth.admin import UserAdmin, GroupAdmin
 from django.contrib.auth.models import Group
 from django.utils.translation import gettext_lazy as _
 
-from contabilidad.admin import custom_admin_site
-
 from .models import User, Grupo
 
-
-@admin.register(User, site=custom_admin_site)
+@admin.register(User)
 class CustomUserAdmin(UserAdmin):
     """
     Usuario personalizado para admin
     """
-
     fieldsets = (
         ("Auntenticación", {"fields": ("username", "password")}),
         (_("Personal info"), {"fields": ("first_name", "last_name", "email")}),
@@ -25,7 +21,7 @@ class CustomUserAdmin(UserAdmin):
                     "is_staff",
                     "groups",
                     "user_permissions",
-                    "empresas",
+                    "empresas"
                 ),
             },
         ),
@@ -34,6 +30,10 @@ class CustomUserAdmin(UserAdmin):
     readonly_fields = ["last_login", "date_joined"]
 
 
-@admin.register(Grupo, site=custom_admin_site)
+admin.site.unregister(Group)
+admin.site.site_header ="Econta"
+admin.site.site_title = "Econta"
+
+@admin.register(Grupo)
 class GrupoAdmin(GroupAdmin):
     pass

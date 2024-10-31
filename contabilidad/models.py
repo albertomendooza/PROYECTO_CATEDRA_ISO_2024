@@ -1,16 +1,13 @@
-from decimal import Decimal
 from django.db import models
-from django.utils import timezone
 
-from contactos.models import Contacto, ConsumidorFinal
+from contactos.models import Contacto
 from empresas.models import Empresa, Sucursal
 
 
 class Compras(models.Model):
     empresa = models.ForeignKey(to=Empresa, on_delete=models.PROTECT)
-    proveedor = models.ForeignKey(
-        to=Contacto, on_delete=models.PROTECT, limit_choices_to={"proveedor": True}
-    )
+    nrc_proveedor = models.ForeignKey(to=Contacto, on_delete=models.PROTECT, verbose_name="NRC de proveedor")
+    nombre_de_proveedor = models.CharField(max_length=200)
     tipo_de_comprobante = models.CharField(
         max_length=3,
         choices=(
@@ -19,38 +16,24 @@ class Compras(models.Model):
             ("PLZ", "Poliza"),
             ("NDC", "Nota de Crédito"),
         ),
-        default="CCF",
     )
-    numero_de_comprobante = models.CharField(max_length=32, default="")
+    numero_de_comprobante = models.CharField(
+        max_length=32, verbose_name="número de comprobante"
+    )
     numero_de_serie = models.CharField(max_length=10, blank=True, null=True)
     fecha = models.DateField()
     tipo_de_compra = models.CharField(
-        max_length=3,
-        choices=(("INT", "Interna"), ("IMP", "Importación")),
-        default="INT",
+        max_length=3, choices=(("INT", "Interna"), ("IMP", "Importación"))
     )
-    compra_neta = models.DecimalField(
-        max_digits=8, decimal_places=2, default=Decimal("0.00")
-    )
-    iva = models.DecimalField(
-        verbose_name="I.V.A.", max_digits=8, decimal_places=2, default=Decimal("0.00")
-    )
+    compra_neta = models.DecimalField(max_digits=8, decimal_places=2)
+    iva = models.DecimalField(verbose_name="I.V.A.", max_digits=8, decimal_places=2)
     percepcion_iva = models.DecimalField(
-        verbose_name="percepción I.V.A.",
-        max_digits=8,
-        decimal_places=2,
-        default=Decimal("0.00"),
+        verbose_name="percepción I.V.A.", max_digits=8, decimal_places=2
     )
-    sub_total = models.DecimalField(
-        max_digits=8, decimal_places=2, default=Decimal("0.00")
-    )
-    compra_excenta = models.DecimalField(
-        max_digits=8, decimal_places=2, default=Decimal("0.00")
-    )
-    compra_excluida = models.DecimalField(
-        max_digits=8, decimal_places=2, default=Decimal("0.00")
-    )
-    total = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal("0.00"))
+    sub_total = models.DecimalField(max_digits=8, decimal_places=2)
+    compra_excenta = models.DecimalField(max_digits=8, decimal_places=2)
+    compra_excluida = models.DecimalField(max_digits=8, decimal_places=2)
+    total = models.DecimalField(max_digits=8, decimal_places=2)
     tipo_de_gasto = models.CharField(
         max_length=3,
         choices=(
@@ -60,71 +43,54 @@ class Compras(models.Model):
             ("GAF", "Gasto Financiero"),
             ("OGA", "Otro Gasto"),
         ),
-        default="CST",
     )
 
     class Meta:
         verbose_name = "compra"
         verbose_name_plural = "compras"
 
-    def __str__(self) -> str:
-        return self.numero_de_comprobante
-
 
 class VentasAConsumidorFinal(models.Model):
     empresa = models.ForeignKey(to=Empresa, on_delete=models.PROTECT)
-    sucursal = models.ForeignKey(
-        to=Sucursal, verbose_name="sucursal", on_delete=models.PROTECT
+    numero_sucursal = models.ForeignKey(
+        to=Sucursal, verbose_name="número de sucursal", on_delete=models.PROTECT
     )
-    tipo_de_comprobante = models.CharField(
+    nombre_de_sucursal = models.CharField(max_length=100)
+    tipo_de_comprobate = models.CharField(
         max_length=3,
         choices=(
-            ("FCF", "Factura de Consumidor Final"),
+            ("FAC", "Factura de Consumidor Final"),
             ("NDC", "Nota de Crédito"),
-            ("FEX", "Factura de exportación"),
         ),
-        default="FCF",
     )
-    fecha = models.DateField(default=timezone.now().today)
+    nombre_de_comprobantes = models.CharField(max_length=100)
+    numero_de_resolucion = models.CharField(max_length=30)
     serie_de_documento = models.CharField(max_length=30)
-    numero_de_resolucion = models.CharField(
-        max_length=35, verbose_name="número de resolución"
+    codigo_cliente = models.ForeignKey(
+        to=Contacto, limit_choices_to={"cliente": True}, on_delete=models.PROTECT
     )
+    nombre_del_cliente = models.CharField(max_length=200)
     numero_de_documento = models.CharField(
         max_length=35, verbose_name="número de documento"
     )
-    cliente = models.ForeignKey(
-        to=ConsumidorFinal, on_delete=models.PROTECT, blank=True, null=True
-    )
     tipo_de_venta = models.CharField(
-        max_length=2, choices=(("IN", "Interna"), ("EX", "Exportación")), default="IN"
+        max_length=2, choices=(("IN", "Interna"), ("EX", "Exportación"))
     )
-    ventas_gravadas = models.DecimalField(
-        max_digits=8, decimal_places=2, default=Decimal("0.00")
-    )
-    ventas_no_sujetas = models.DecimalField(
-        max_digits=8, decimal_places=2, default=Decimal("0.00")
-    )
-    ventas_exentas = models.DecimalField(
-        max_digits=8, decimal_places=2, default=Decimal("0.00")
-    )
-    sub_total = models.DecimalField(
-        max_digits=8, decimal_places=2, default=Decimal("0.00")
-    )
-    retencion_de_iva = models.DecimalField(
-        max_digits=8,
-        decimal_places=2,
-        default=Decimal("0.00"),
-        verbose_name="IVA Retenido (-)",
-    )
-    total = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal("0.00"))
+    total_venta_gravada = models.DecimalField(max_digits=8, decimal_places=2)
+    venta_neta = models.DecimalField(max_digits=8, decimal_places=2)
+    iva = models.DecimalField(verbose_name="IVA", max_digits=8, decimal_places=2)
+    sub_total = models.DecimalField(max_digits=8, decimal_places=2)
+    retencion_de_iva = models.DecimalField(max_digits=8, decimal_places=2)
+    total_venta_excenta = models.DecimalField(max_digits=8, decimal_places=2)
+    total_general = models.DecimalField(max_digits=8, decimal_places=2)
 
     class Meta:
         verbose_name = "venta a consumidor final"
         verbose_name_plural = "ventas a consumidor final"
 
     def __str__(self) -> str:
-        return f"{self.empresa.nombre} - {self.numero_de_documento}"
+        return f"{self.empresa} - {self.numero}"
+    
 
 
 class VentasAContribuyente(models.Model):
@@ -133,58 +99,35 @@ class VentasAContribuyente(models.Model):
     """
 
     empresa = models.ForeignKey(to=Empresa, on_delete=models.PROTECT)
-    sucursal = models.ForeignKey(to=Sucursal, on_delete=models.PROTECT)
-    fecha = models.DateField(default=timezone.now().today)
-    tipo_de_comprobante = models.CharField(
+    numero_sucursal = models.ForeignKey(
+        to=Sucursal, verbose_name="número de sucursal", on_delete=models.PROTECT
+    )
+    nombre_de_sucursal = models.CharField(max_length=100)
+    tipo_de_comprobate = models.CharField(
         max_length=3,
         choices=(("CCF", "Comprobante de Crédito Fiscal"), ("NDC", "Nota de Crédito")),
     )
-    clase_de_documento = models.CharField(
-        choices=(
-            ("IMP", "impreso"),
-            ("FOU", "formulario único"),
-            ("DTE", "documento tributario electrónico"),
-        ),
-        default="IMP",
-        max_length=3,
-    )
+    nombre_de_comprobantes = models.CharField(max_length=100)
+    numero_de_resolucion = models.CharField(max_length=30)
     serie_de_documento = models.CharField(max_length=30)
-    numero_de_resolucion = models.CharField(
-        max_length=100, verbose_name="número de resolución"
-    )
-    cliente = models.ForeignKey(
+    nrc_cliente = models.ForeignKey(
         to=Contacto, limit_choices_to={"cliente": True}, on_delete=models.PROTECT
     )
+    nombre_del_cliente = models.CharField(max_length=200)
     numero_de_documento = models.CharField(
         max_length=35, verbose_name="número de comprobante"
     )
-    ventas_gravadas = models.DecimalField(
-        max_digits=8, decimal_places=2, default=Decimal("0.00")
-    )
-    ventas_no_sujetas = models.DecimalField(
-        max_digits=8, decimal_places=2, default=Decimal("0.00")
-    )
-    ventas_exentas = models.DecimalField(
-        max_digits=8, decimal_places=2, default=Decimal("0.00")
-    )
-    iva = models.DecimalField(
-        verbose_name="IVA", max_digits=8, decimal_places=2, default=Decimal("0.00")
-    )
-    sub_total = models.DecimalField(
-        max_digits=8, decimal_places=2, default=Decimal("0.00")
-    )
-    retencion_de_iva = models.DecimalField(
-        max_digits=8,
-        decimal_places=2,
-        default=Decimal("0.00"),
-        verbose_name="IVA Retenido (-)",
-    )
-    total = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal("0.00"))
-    anulado = models.BooleanField(default=False)
+    venta_neta = models.DecimalField(max_digits=8, decimal_places=2)
+    iva = models.DecimalField(verbose_name="IVA", max_digits=8, decimal_places=2)
+    sub_total = models.DecimalField(max_digits=8, decimal_places=2)
+    retencion_de_iva = models.DecimalField(max_digits=8, decimal_places=2)
+    sub_total = models.DecimalField(max_digits=8, decimal_places=2)
+    venta_excenta = models.DecimalField(max_digits=8, decimal_places=2)
+    total = models.DecimalField(max_digits=8, decimal_places=2)
 
     class Meta:
         verbose_name = "venta a contribuyente"
         verbose_name_plural = "ventas a contribuyentes"
 
     def __str__(self) -> str:
-        return f"{self.empresa} - {self.numero_de_documento}"
+        return f"{self.empresa} - {self.numero}"
